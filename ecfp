@@ -1,9 +1,3 @@
-The websites used:
-- https://github.com/ubccr/pinky/blob/master/pinky/fingerprints/ecfp.py
-- https://docs.chemaxon.com/display/docs/extended-connectivity-fingerprint-ecfp.md#src-1806333-extendedconnectivityfingerprintecfp-configuration
-- http://cmseng.skku.edu/CMS_Lecture/ML/RDKit_intro.html
-- https://pubs.acs.org/doi/10.1021/ci100050t
-
 import pandas as pd
 import numpy as np 
 import seaborn as sns
@@ -13,48 +7,17 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors
 from rdkit.ML.Descriptors import MoleculeDescriptors 
 
-dataset = pd.read_excel(r"C:\Users\teffa\OneDrive\Documents\Final Year Project\Disso Current Data\Dataset_1.xlsx")
+df = pd.read_excel(r"C:\Users\teffa\OneDrive\Documents\Final Year Project\Disso Current Data\Dataset_1.xlsx")
 
-def invariants(mol):
-    """Generate initial atom identifiers using atomic invariants"""
-    atom_ids = {}
-    for a in mol.atoms:
-        components = []
-        components.append(a.number)
-        components.append(len(a.oatoms))
-        components.append(a.hcount)
-        components.append(a.charge)
-        components.append(a.mass)
-        if len(a.rings) > 0:
-            components.append(1)
+# generating ECFPs (also known as morgan fps) with 1,024 bit length
+ECFP4 = []
 
-        atom_ids[a.index] = hash(tuple(components))
-
-    return atom_ids
-
-def ecfp(mol, radius=2, nBits=2048):
-
-    # Generate atom identifiers using invariants function
-    atom_ids = invariants(mol)
-
-    # Generate extended-connectivity fingerprint with the specified radius and bit length
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=nBits, useFeatures=True, useChirality=True, atomInvariants=atom_ids)
-
-    # Convert the fingerprint to a numpy array and return it
-    fp_array = np.zeros((1,))
-    DataStructs.ConvertToNumpyArray(fp, fp_array)
-    return fp_array
-
-# Generate extended-connectivity fingerprints for each molecule in the dataset
-fps = []
-for i, row in dataset.iterrows():
-    mol = Chem.MolFromSmiles(row['SMILES'])
-    fp = ecfp(mol)
-    fps.append(fp)
-
-# Add the fingerprints to the dataset as new columns
-fp_df = pd.DataFrame(np.vstack(fps))
-fp_df.columns = ['fp{}'.format(i+1) for i in range(fp_df.shape[1])]
-dataset = pd.concat([dataset, fp_df], axis=1)
-
-print(dataset)
+for i in range (0, len(df)):
+    mol = Chem.MolFromSmiles(df.iloc[i,0]) 
+    fp = AllChem.GetMorganFingerprintAsBitVect(mol,2,nBits=1024)
+    fp_list = np.unique(fp, return_inverse=True)[1].tolist()
+    ECFP4.append(fp_list)
+ECFP4 = pd.DataFrame(data= ECFP4)
+ECFP4 = pd.concat([ECFP4, df.iloc[:, -1]], axis = 1)
+print(ECFP4.head())
+print(ECFP4.shape)
